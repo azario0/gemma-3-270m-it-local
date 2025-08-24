@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Text Generator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #2d3748;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .header p {
+            color: #718096;
+            font-size: 1.1rem;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            min-height: 500px;
+        }
+
+        .input-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .input-section h2 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+        }
+
+        .prompt-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #prompt {
+            flex: 1;
+            padding: 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            font-size: 16px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            resize: none;
+            outline: none;
+            transition: all 0.3s ease;
+            background: #f8fafc;
+        }
+
+        #prompt:focus {
+            border-color: #667eea;
+            background: white;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        .controls {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            align-items: center;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-secondary {
+            background: #e2e8f0;
+            color: #4a5568;
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: #cbd5e0;
+        }
+
+        .btn-danger {
+            background: #fed7d7;
+            color: #e53e3e;
+        }
+
+        .btn-danger:hover:not(:disabled) {
+            background: #feb2b2;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .output-section {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .output-section h2 {
+            color: #2d3748;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .output-container {
+            flex: 1;
+            background: #1a202c;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 12px;
+            font-family: 'Consolas', 'Monaco', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            overflow-y: auto;
+            position: relative;
+            min-height: 400px;
+        }
+
+        .output-container::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .output-container::-webkit-scrollbar-track {
+            background: #2d3748;
+            border-radius: 4px;
+        }
+
+        .output-container::-webkit-scrollbar-thumb {
+            background: #4a5568;
+            border-radius: 4px;
+        }
+
+        .status-bar {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #667eea;
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 500;
+        }
+
+        .status-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #68d391;
+        }
+
+        .status-dot.generating {
+            background: #fbb6ce;
+            animation: pulse 2s infinite;
+        }
+
+        .status-dot.error {
+            background: #fc8181;
+        }
+
+        .stats {
+            font-size: 0.9rem;
+            color: #718096;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .cursor {
+            background: #667eea;
+            animation: blink 1s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0; }
+        }
+
+        .loading-spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid #e2e8f0;
+            border-top: 2px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            color: #e53e3e;
+            background: #fed7d7;
+            padding: 10px;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                gap: 20px;
+            }
+            
+            .header h1 {
+                font-size: 2rem;
+            }
+            
+            .container {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>AI Text Generator</h1>
+            <p>Stream text generation with real-time responses</p>
+        </header>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2>Input Prompt</h2>
+                <div class="prompt-container">
+                    <textarea 
+                        id="prompt" 
+                        placeholder="Enter your prompt here...&#10;&#10;Example:&#10;Write a story about a robot who discovers emotions..."
+                        rows="15"
+                    ></textarea>
+                </div>
+                
+                <div class="controls">
+                    <button id="generateBtn" class="btn btn-primary">
+                        <span id="generateIcon">▶</span>
+                        <span id="generateText">Generate</span>
+                    </button>
+                    <button id="stopBtn" class="btn btn-danger" disabled>
+                        <span>⏹</span>
+                        Stop
+                    </button>
+                    <button id="clearBtn" class="btn btn-secondary">
+                        <span>🗑</span>
+                        Clear
+                    </button>
+                </div>
+            </div>
+
+            <div class="output-section">
+                <h2>
+                    Generated Output
+                    <span id="outputSpinner" class="loading-spinner" style="display: none;"></span>
+                </h2>
+                <div id="output" class="output-container">
+                    <div style="color: #718096; font-style: italic;">
+                        Generated text will appear here...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div id="statusDot" class="status-dot"></div>
+                <span id="statusText">Ready</span>
+            </div>
+            <div class="stats">
+                <span>Characters: <span id="charCount">0</span></span>
+                <span style="margin-left: 20px;">Words: <span id="wordCount">0</span></span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class TextGeneratorUI {
+            constructor() {
+                this.eventSource = null;
+                this.isGenerating = false;
+                this.generatedText = '';
+                this.sessionId = null;
+                
+                this.initElements();
+                this.bindEvents();
+                this.checkBackendStatus();
+            }
+
+            initElements() {
+                this.elements = {
+                    prompt: document.getElementById('prompt'),
+                    output: document.getElementById('output'),
+                    generateBtn: document.getElementById('generateBtn'),
+                    stopBtn: document.getElementById('stopBtn'),
+                    clearBtn: document.getElementById('clearBtn'),
+                    statusDot: document.getElementById('statusDot'),
+                    statusText: document.getElementById('statusText'),
+                    charCount: document.getElementById('charCount'),
+                    wordCount: document.getElementById('wordCount'),
+                    outputSpinner: document.getElementById('outputSpinner'),
+                    generateIcon: document.getElementById('generateIcon'),
+                    generateText: document.getElementById('generateText')
+                };
+            }
+
+            bindEvents() {
+                this.elements.generateBtn.addEventListener('click', () => this.startGeneration());
+                this.elements.stopBtn.addEventListener('click', () => this.stopGeneration());
+                this.elements.clearBtn.addEventListener('click', () => this.clearOutput());
+                this.elements.prompt.addEventListener('input', () => this.updatePromptStats());
+                
+                // Enter key handling
+                this.elements.prompt.addEventListener('keydown', (e) => {
+                    if (e.ctrlKey && e.key === 'Enter') {
+                        this.startGeneration();
+                    }
+                });
+            }
+
+            async checkBackendStatus() {
+                try {
+                    const response = await fetch('/health');
+                    const data = await response.json();
+                    
+                    if (data.backend_status === 'connected') {
+                        this.updateStatus('Ready', 'ready');
+                    } else {
+                        this.updateStatus('Backend Disconnected', 'error');
+                    }
+                } catch (error) {
+                    this.updateStatus('Connection Error', 'error');
+                }
+            }
+
+            startGeneration() {
+                const prompt = this.elements.prompt.value.trim();
+                if (!prompt) {
+                    alert('Please enter a prompt first.');
+                    return;
+                }
+
+                if (this.isGenerating) return;
+
+                this.sessionId = Date.now().toString();
+                this.generatedText = '';
+                this.isGenerating = true;
+                
+                this.updateUI(true);
+                this.updateStatus('Connecting...', 'generating');
+                
+                this.eventSource = new EventSource('/generate', {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        prompt: prompt,
+                        session_id: this.sessionId
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                // Create EventSource manually for POST request
+                this.eventSource = new EventSource(
+                    '/generate?' + new URLSearchParams({
+                        prompt: prompt,
+                        session_id: this.sessionId
+                    })
+                );
+
+                // Workaround: Use fetch with streaming
+                this.streamWithFetch(prompt);
+            }
+
+            async streamWithFetch(prompt) {
+                try {
+                    const response = await fetch('/generate', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            prompt: prompt,
+                            session_id: this.sessionId
+                        })
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+
+                    const reader = response.body.getReader();
+                    const decoder = new TextDecoder();
+
+                    this.updateStatus('Generating...', 'generating');
+
+                    while (true) {
+                        const { done, value } = await reader.read();
+                        
+                        if (done) break;
+                        
+                        const chunk = decoder.decode(value);
+                        const lines = chunk.split('\n');
+                        
+                        for (const line of lines) {
+                            if (line.startsWith('data: ')) {
+                                try {
+                                    const data = JSON.parse(line.slice(6));
+                                    this.handleStreamData(data);
+                                } catch (e) {
+                                    console.warn('Failed to parse SSE data:', e);
+                                }
+                            }
+                        }
+                    }
+                } catch (error) {
+                    this.handleError(error.message);
+                }
+            }
+
+            handleStreamData(data) {
+                if (data.status === 'started') {
+                    this.clearOutput();
+                    this.updateStatus('Generating...', 'generating');
+                } else if (data.chunk) {
+                    this.generatedText += data.chunk;
+                    this.elements.output.textContent = this.generatedText + '|';
+                    this.elements.output.scrollTop = this.elements.output.scrollHeight;
+                    this.updateOutputStats();
+                } else if (data.status === 'completed') {
+                    this.elements.output.textContent = this.generatedText;
+                    this.finishGeneration();
+                } else if (data.error) {
+                    this.handleError(data.error);
+                }
+            }
+
+            handleError(errorMessage) {
+                this.updateStatus(`Error: ${errorMessage}`, 'error');
+                this.elements.output.innerHTML = `<div class="error-message">❌ ${errorMessage}</div>`;
+                this.finishGeneration();
+            }
+
+            async stopGeneration() {
+                if (!this.isGenerating) return;
+
+                try {
+                    const response = await fetch('/stop', { method: 'POST' });
+                    const data = await response.json();
+                    console.log('Stop response:', data);
+                } catch (error) {
+                    console.error('Stop error:', error);
+                }
+
+                this.finishGeneration();
+                this.updateStatus('Stopped', 'ready');
+            }
+
+            finishGeneration() {
+                this.isGenerating = false;
+                this.sessionId = null;
+                
+                if (this.eventSource) {
+                    this.eventSource.close();
+                    this.eventSource = null;
+                }
+                
+                this.updateUI(false);
+                
+                if (this.generatedText) {
+                    this.updateStatus('Completed', 'ready');
+                    this.elements.output.textContent = this.generatedText;
+                }
+            }
+
+            clearOutput() {
+                this.elements.output.innerHTML = '<div style="color: #718096; font-style: italic;">Generated text will appear here...</div>';
+                this.generatedText = '';
+                this.updateOutputStats();
+                this.updateStatus('Ready', 'ready');
+            }
+
+            updateUI(generating) {
+                this.elements.generateBtn.disabled = generating;
+                this.elements.stopBtn.disabled = !generating;
+                this.elements.outputSpinner.style.display = generating ? 'block' : 'none';
+                
+                if (generating) {
+                    this.elements.generateIcon.textContent = '⏳';
+                    this.elements.generateText.textContent = 'Generating...';
+                } else {
+                    this.elements.generateIcon.textContent = '▶';
+                    this.elements.generateText.textContent = 'Generate';
+                }
+            }
+
+            updateStatus(text, type) {
+                this.elements.statusText.textContent = text;
+                this.elements.statusDot.className = `status-dot ${type}`;
+            }
+
+            updatePromptStats() {
+                const text = this.elements.prompt.value;
+                const chars = text.length;
+                const words = text.trim() ? text.trim().split(/\s+/).length : 0;
+                
+                this.elements.charCount.textContent = chars;
+                this.elements.wordCount.textContent = words;
+            }
+
+            updateOutputStats() {
+                const chars = this.generatedText.length;
+                const words = this.generatedText.trim() ? this.generatedText.trim().split(/\s+/).length : 0;
+                
+                // Update the stats to show output stats when generating
+                if (this.isGenerating) {
+                    this.elements.charCount.textContent = chars;
+                    this.elements.wordCount.textContent = words;
+                }
+            }
+        }
+
+        // Initialize the application
+        document.addEventListener('DOMContentLoaded', () => {
+            new TextGeneratorUI();
+        });
+    </script>
+</body>
+</html>
